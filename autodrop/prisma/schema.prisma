@@ -1,0 +1,479 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum ShipmentStatus {
+  CANCELLED
+  ERROR
+  FAILURE
+  OPEN
+  PENDING
+  SUCCESS
+}
+
+enum DisplayStatus {
+  ATTEMPTED_DELIVERY
+  CANCELED
+  CONFIRMED
+  DELAYED
+  DELIVERED
+  FAILURE
+  FULFILLED
+  IN_TRANSIT
+  LABEL_PRINTED
+  LABEL_PURCHASED
+  LABEL_VOIDED
+  MARKED_AS_FULFILLED
+  NOT_DELIVERED
+  OUT_FOR_DELIVERY
+  PICKED_UP
+  READY_FOR_PICKUP
+  SUBMITTED
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  password      String
+  name          String?
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  logs          Log[]
+  Configuration Configuration?
+  Filter        Filter[]
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPERADMIN
+}
+
+model Configuration {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  category     String
+  salesTax     Float
+  categoryFee  Float
+  profitMargin Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId]) // Ensures one configuration per user
+}
+
+model Product {
+  id                 Int      @id @default(autoincrement())
+  shopifyId          String   @unique
+  formattedShopifyId String
+  title              String
+  description        String   @db.Text
+  descriptionHtml    String   @db.Text
+  imageUrl           String
+  price              Float
+  inventory          Int
+  categoryId         Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  readyToSync        Boolean  @default(false)
+
+  // 🔄 Fee/Tax Configuration
+  usesCustomConfig  Boolean @default(false)
+  salesTax          Float?
+  categoryFee       Float?
+  fixedFeeLow       Float?
+  fixedFeeHigh      Float?
+  fixedFeeThreshold Float?
+  profitMargin      Float?
+
+  // Relations
+  AISuggestion   AISuggestion[]
+  category       EbayCategory?   @relation(fields: [categoryId], references: [id])
+  variants       Variant[]
+  productOptions ProductOption[]
+  ebayListing    EbayListing?
+  Order          Order[]
+}
+
+model Variant {
+  id                 Int     @id @default(autoincrement())
+  productId          Int
+  shopifyId          String  @unique
+  formattedShopifyId String
+  title              String
+  sku                String  @unique
+  price              Float
+  compareAtPrice     Float?
+  inventory          Int
+  imageUrl           String?
+  imageAlt           String?
+  listedOnEbay       Boolean @default(false)
+  readyToSync        Boolean @default(false)
+
+  // 🧾 Optional: If needed in future, can be added per-variant.
+  adjustedPrice Float?
+  finalPrice    Float?
+
+  product        Product         @relation(fields: [productId], references: [id])
+  variantOptions VariantOption[]
+  orders         Order[]
+  OrderItem      OrderItem[]
+}
+
+model ProductOption {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  name      String // e.g., "Size", "Color"
+  values    Json? // e.g., ["S", "M", "L"]
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model VariantOption {
+  id        Int     @id @default(autoincrement())
+  variantId Int
+  name      String // e.g., "Size"
+  value     String // e.g., "M"
+  variant   Variant @relation(fields: [variantId], references: [id])
+}
+
+model EbayCategory {
+  id           Int            @id @default(autoincrement())
+  categoryId   Int            @unique // eBay's categoryId
+  name         String
+  ebayAspects  EbayAspect[]
+  products     Product[] // New: Relation to Product
+  AISuggestion AISuggestion[]
+}
+
+model EbayAspect {
+  id             Int     @id @default(autoincrement())
+  ebayCategoryId Int
+  name           String
+  required       Boolean
+  aspectType     String
+  possibleValues Json?
+
+  category EbayCategory @relation(fields: [ebayCategoryId], references: [id])
+
+  @@unique([ebayCategoryId, name]) // 👈 This line is critical
+}
+
+model EbayListing {
+  id             Int      @id @default(autoincrement())
+  productId      Int      @unique
+  ebayItemId     String
+  status         String
+  response       Json?
+  ebayCategoryId Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  product           Product @relation(fields: [productId], references: [id])
+  ebayCategoryOldId Int?
+}
+
+model Order {
+  id             Int         @id @default(autoincrement())
+  ebayOrderId    String      @unique
+  shopifyOrderId String?
+  variantId      Int
+  quantity       Int
+  buyerName      String
+  address        String
+  country        String
+  status         String      @default("Pending")
+  trackingNumber String?
+  fulfillmentId  String?
+  source         OrderSource
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  variant   Variant  @relation(fields: [variantId], references: [id])
+  Product   Product? @relation(fields: [productId], references: [id])
+  productId Int?
+}
+
+enum OrderSource {
+  EBAY
+  SHOPIFY
+  ZENDROP
+}
+
+model EbayOrder {
+  id                       Int       @id @default(autoincrement())
+  ebayOrderid              String    @unique
+  totalPrice               String
+  ebayFee                  String
+  ebayListingPrice         String
+  buyerName                String
+  buyerEmail               String
+  buyerPhoneNo             String
+  billingAddressId         Int?
+  shippingAddressId        Int?
+  shopifyOrderId           String?
+  formattedShopifyOrderId  String?   @unique
+  shopifyDraftOrderId      String?
+  orderFulfillmentStatus   String    @default("NOT_STARTED")
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  shopifyOrderCancelReason String?
+  shopifyOrderCancelAt     DateTime?
+  billingAddress           Address?  @relation("BillingAddress", fields: [billingAddressId], references: [id])
+
+  shippingAddress Address? @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+
+  payment         Payment[]
+  orderItem       OrderItem[]
+  shopifyShipment ShopifyShipment[]
+  ebayShipment    EbayShipment[]
+
+  ebayReturn     EbayReturn[]
+  CancelledOrder CancelledOrder?
+}
+
+model CancelledOrder {
+  id                 Int       @id @default(autoincrement())
+  storeOrderId       String    @unique // Shopify Order ID
+  isCancelledShopify Boolean
+  isCancelledEbay    Boolean
+  createdAt          DateTime  @default(now())
+  ebayOrder          EbayOrder @relation(fields: [storeOrderId], references: [formattedShopifyOrderId])
+}
+
+enum AddressType {
+  BILLING
+  SHIPPING
+}
+
+model Address {
+  id            Int         @id @default(autoincrement())
+  type          AddressType @default(BILLING)
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  county        String?
+  zipCode       String
+  state         String
+  country       String
+  billingOrder  EbayOrder[] @relation("BillingAddress")
+  shippingOrder EbayOrder[] @relation("ShippingAddress")
+}
+
+model OrderItem {
+  id                       Int            @id @default(autoincrement())
+  sku                      String
+  lineItemId               String         @unique
+  lineItemCost             String
+  total                    String
+  quantity                 Int
+  ebayCollectAndRemitTaxes Json?
+  ebayOrderId              Int
+  variant                  Variant        @relation(fields: [sku], references: [sku])
+  ebayOrder                EbayOrder      @relation(fields: [ebayOrderId], references: [id])
+  EbayFeedback             EbayFeedback[]
+}
+
+model Payment {
+  id                 Int           @id @default(autoincrement())
+  paymentReferenceId String
+  paymentDate        DateTime
+  ebayPrice          Float
+  shopifyPrice       Int           @default(0)
+  paymentStatus      PaymentStatus
+  paymentHold        Json
+  ebayOrderId        Int
+  EbayOrder          EbayOrder     @relation(fields: [ebayOrderId], references: [id])
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+model EbayFeedback {
+  id               Int        @id @default(autoincrement())
+  feedbackId       String     @unique
+  feedbackUser     String
+  commentText      String     @db.Text
+  feedbackResponse String?    @db.Text
+  commentType      String
+  orderItemId      String
+  orderItem        OrderItem? @relation(fields: [orderItemId], references: [lineItemId])
+  createdAt        DateTime
+  updatedAt        DateTime   @updatedAt
+}
+
+// enum CommentType {
+//   Positive
+//   Neutral
+//   Negative
+// }
+
+model AISuggestion {
+  id              Int      @id @default(autoincrement())
+  productId       Int // prodyctId is the foreign key to Product
+  suggestedId     String
+  suggestedName   String
+  confidenceScore Float // not sure if this is needed
+  selected        Boolean  @default(false) // Indicates if the suggestion is selected by the user
+  createdAt       DateTime @default(now())
+
+  product        Product       @relation(fields: [productId], references: [id])
+  EbayCategory   EbayCategory? @relation(fields: [ebayCategoryId], references: [id])
+  ebayCategoryId Int?
+}
+
+model Log {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String
+  details   String
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model ShopifyShipment {
+  id                   Int            @id @default(autoincrement())
+  shopifyShipmentId    String
+  orderId              Int
+  carrier              String
+  trackingNumber       String
+  trackingUrl          String
+  status               ShipmentStatus
+  displayStatus        DisplayStatus
+  estimatedDeliveryAt  DateTime?
+  createdAt            DateTime
+  updatedAt            DateTime
+  deliveredAt          DateTime?
+  fulfillmentLineItems Json?
+
+  ebayShipment EbayShipment[]
+  order        EbayOrder      @relation(fields: [orderId], references: [id])
+}
+
+model EbayShipment {
+  id                Int      @id @default(autoincrement())
+  shopifyShipmentId Int
+  fulfillmentId     String
+  orderId           Int
+  carrier           String
+  trackingNumber    String
+  serviceCode       String
+  trackingUrl       String
+  createdAt         DateTime
+  updatedAt         DateTime
+  lineItems         Json?
+
+  shopifyShipment ShopifyShipment @relation(fields: [shopifyShipmentId], references: [id])
+
+  order EbayOrder @relation(fields: [orderId], references: [id])
+}
+
+model Token {
+  id          Int      @id @default(autoincrement())
+  name        String
+  accessToken String   @db.Text
+  expiresAt   DateTime
+  updatedAt   DateTime @updatedAt
+}
+
+model EbayReturn {
+  id                Int      @id @default(autoincrement())
+  ebayReturnId      String
+  currentType       String
+  orderId           Int
+  creationDate      DateTime
+  itemId            String
+  transactionId     String
+  returnQuantity    Int
+  reason            String
+  type              String
+  buyerTotalRefund  Float
+  sellerTotalRefund Float
+  status            String
+  createdAt         DateTime @default(now())
+
+  ebayOrder EbayOrder @relation(fields: [orderId], references: [id])
+}
+
+model ShopifyReturn {
+  id                  Int      @id @default(autoincrement())
+  shopifyReturnId     String
+  ebayId              Int
+  orderId             Int
+  shopifyOrderId      String
+  fulfillmentLineItem String
+  quantity            Int
+  returnReason        String
+  returnLineItems     Json?
+  status              String
+  createdAt           DateTime @default(now())
+}
+
+model ZendropProduct {
+  id                        Int     @id @default(autoincrement())
+  productId                 String
+  importId                  String
+  usShippingType            String
+  internationalShippingType String
+  importStatus              String
+  featuredImage             String
+  productName               String
+  description               String  @db.Text
+  shippingInfo              String  @db.Text
+  supplierId                Int
+  categotyId                Int     @default(0)
+  ShopifyProductId          String?
+
+  createdAt DateTime @default(now())
+
+  zendropVariation ZendropVariation[]
+}
+
+model ZendropVariation {
+  id               Int     @id @default(autoincrement())
+  productId        Int
+  zendropId        Int
+  zendropProductId Int
+  sku              String
+  costPrice        String
+  weight           String?
+  size             String?
+  color            String?
+  inventory        Int
+  profitMargin     String?
+  profitPercentage String?
+  shippingprice    String
+  shippingTime     String
+  shippingType     String
+
+  zendropProduct ZendropProduct @relation(fields: [productId], references: [id])
+}
+
+model ZendropCategory {
+  id        Int    @id @default(autoincrement())
+  zendropId Int
+  name      String
+  slug      String
+}
+
+model Filter {
+  id        Int      @id @default(autoincrement())
+  userId    Int // If multi-user system
+  type      String // e.g., "order"
+  config    Json // Stores full filter object
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Optional: Add a relation if you have a User model
+  user User? @relation(fields: [userId], references: [id])
+}

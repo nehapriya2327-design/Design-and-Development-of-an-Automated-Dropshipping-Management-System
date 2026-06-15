@@ -1,0 +1,338 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius: 0.5rem;
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+}
+
+:root {
+  --font-geist-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-geist-mono: "Fira Code", monospace;
+  --background: oklch(0.98 0.01 270);
+  --foreground: oklch(0.25 0.03 260);
+  --surface: oklch(0.99 0.005 270 / 0.9);
+  --surface-foreground: oklch(0.25 0.03 260);
+  --primary: oklch(0.65 0.15 260);
+  --primary-foreground: oklch(0.98 0.01 270);
+  --secondary: oklch(0.85 0.05 265);
+  --secondary-foreground: oklch(0.25 0.03 260);
+  --muted: oklch(0.90 0.02 265);
+  --muted-foreground: oklch(0.55 0.03 260);
+  --accent: oklch(0.75 0.10 270);
+  --accent-foreground: oklch(0.98 0.01 270);
+  --destructive: oklch(0.65 0.20 20);
+  --border: oklch(0.85 0.02 260 / 0.2);
+  --input: oklch(0.85 0.02 260 / 0.15);
+  --ring: oklch(0.65 0.15 260);
+}
+
+.dark {
+  --background: oklch(0.30 0.03 260);
+  /* Slightly darker background */
+  --foreground: oklch(0.90 0.01 270);
+  /* Lighter text */
+  --surface: oklch(0.35 0.03 260 / 0.95);
+  /* Darker surface with subtle opacity */
+  --surface-foreground: oklch(0.90 0.01 270);
+  --primary: oklch(0.70 0.15 260);
+  /* Slightly lighter indigo */
+  --primary-foreground: oklch(0.98 0.01 270);
+  --secondary: oklch(0.40 0.05 265);
+  --secondary-foreground: oklch(0.90 0.01 270);
+  --muted: oklch(0.35 0.03 265);
+  --muted-foreground: oklch(0.65 0.03 260);
+  --accent: oklch(0.80 0.10 270);
+  --accent-foreground: oklch(0.98 0.01 270);
+  --destructive: oklch(0.70 0.20 20);
+  --border: oklch(0.40 0.03 260 / 0.3);
+  --input: oklch(0.40 0.03 260 / 0.2);
+  --ring: oklch(0.70 0.15 260);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  input,
+  button,
+  textarea,
+  select {
+    @apply font-sans;
+  }
+
+  /* Webkit-based browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+    /* Completely hidden track */
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(45deg, #3b82f6, #a855f7);
+    /* Blue-to-purple gradient for light mode */
+    border-radius: 12px;
+    transition: box-shadow 0.2s ease-in-out;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+    /* Blue glow on hover */
+    animation: pulse 1.5s infinite;
+    /* Pulse animation for light mode */
+  }
+
+  /* Hide scrollbar arrows */
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+
+  /* Dark mode styles */
+  .dark ::-webkit-scrollbar-thumb {
+    background: linear-gradient(45deg, #2dd4bf, #3b82f6);
+    /* Teal-to-blue gradient for dark mode */
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    box-shadow: 0 0 10px rgba(45, 212, 191, 0.6);
+    /* Teal glow on hover */
+    animation: pulse-dark 1.5s infinite;
+    /* Pulse animation for dark mode */
+  }
+
+  /* Pulse animation for light mode */
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+    }
+
+    50% {
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+    }
+
+    100% {
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+    }
+  }
+
+  /* Pulse animation for dark mode */
+  @keyframes pulse-dark {
+    0% {
+      box-shadow: 0 0 10px rgba(45, 212, 191, 0.6);
+    }
+
+    50% {
+      box-shadow: 0 0 15px rgba(45, 212, 191, 0.8);
+    }
+
+    100% {
+      box-shadow: 0 0 10px rgba(45, 212, 191, 0.6);
+    }
+  }
+
+  /* Firefox scrollbar styles */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 transparent;
+    /* Blue thumb, transparent track */
+  }
+
+  .dark * {
+    scrollbar-color: #2dd4bf transparent;
+    /* Teal thumb, transparent track */
+  }
+
+  /* Enhance Tailwind's scrollbar classes for ProductRow */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thumb-gray-200 {
+    scrollbar-color: #3b82f6 transparent;
+    /* Override with gradient-compatible color */
+  }
+
+  .scrollbar-track-gray-100 {
+    scrollbar-color: #3b82f6 transparent;
+    /* Transparent track */
+  }
+
+  .dark .scrollbar-thumb-gray-600 {
+    scrollbar-color: #2dd4bf transparent;
+    /* Dark mode teal thumb */
+  }
+
+  .dark .scrollbar-track-gray-800 {
+    scrollbar-color: #2dd4bf transparent;
+    /* Transparent track */
+  }
+}
+
+@layer utilities {
+  .fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Shimmer Animation for Skeleton */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 1.5s infinite;
+  }
+
+  .heading-2 {
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  #sfd-pg {
+    .fulfillments-sec {
+      .fulfillment-dv {
+        background: #fff;
+        padding: 20px 20px;
+
+        p {
+          margin-bottom: 20px;
+
+          strong {
+            display: inline-block;
+            width: 250px;
+          }
+        }
+
+      }
+    }
+
+    .shipment-sec {
+      .shipment-dv {
+        background: #fff;
+        padding: 20px 20px;
+
+        p {
+          margin-bottom: 20px;
+
+          strong {
+            display: inline-block;
+            width: 250px;
+          }
+        }
+
+      }
+    }
+
+  }
+
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
+}
+
+
+.item-fulfillment {
+  .fulfillment-dv {
+
+    padding: 20px 20px;
+
+    p {
+      margin-bottom: 20px;
+
+      strong {
+        display: inline-block;
+        width: 250px;
+      }
+    }
+
+  }
+}
+
+
+.popup-model {
+  .popup-div {
+    width: 700px;
+  }
+}
+
+
+.loader-btn {
+
+  width: 200px;
+  text-align: center;
+
+  svg {
+    margin: auto;
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+.action-td {
+  svg {
+    display: inline-block;
+    margin-left: 10px;
+  }
+}
